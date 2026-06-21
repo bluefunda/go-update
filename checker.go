@@ -33,7 +33,7 @@ func fetchLatest(owner, repo string) (*githubRelease, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GitHub API: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API returned HTTP %d for %s/%s releases/latest", resp.StatusCode, owner, repo)

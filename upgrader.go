@@ -100,7 +100,7 @@ func (d *DpkgUpgrader) Upgrade(cfg Config, version string) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(path)
+	defer os.Remove(path) //nolint:errcheck
 
 	cmd := execCommand("sudo", "dpkg", "-i", path)
 	cmd.Stdout = os.Stdout
@@ -122,7 +122,7 @@ func (r *RpmUpgrader) Upgrade(cfg Config, version string) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(path)
+	defer os.Remove(path) //nolint:errcheck
 
 	cmd := execCommand("sudo", "rpm", "-U", path)
 	cmd.Stdout = os.Stdout

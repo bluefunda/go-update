@@ -102,7 +102,7 @@ func TestRun_DevVersion_AlwaysOffersUpdate(t *testing.T) {
 
 func latestVersionServer(tag string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"tag_name": tag,
 			"html_url": "https://github.com/example/repo/releases/tag/" + tag,
 		})

@@ -13,7 +13,7 @@ func TestFetchLatest_Success(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"tag_name": "v1.5.0",
 			"html_url": "https://github.com/owner/repo/releases/tag/v1.5.0",
 		})
@@ -51,7 +51,7 @@ func TestFetchLatest_NotFound(t *testing.T) {
 
 func TestFetchLatest_EmptyTag(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]string{"tag_name": ""})
+		_ = json.NewEncoder(w).Encode(map[string]string{"tag_name": ""})
 	}))
 	defer ts.Close()
 
