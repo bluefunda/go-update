@@ -47,13 +47,46 @@ type BrewUpgrader struct {
 func (b *BrewUpgrader) Name() string { return "Homebrew" }
 
 func (b *BrewUpgrader) Upgrade(cfg Config, version string) error {
-	cmd := execCommand("brew", "upgrade", "--cask", b.Cask)
+	// Refresh tap index so the formula knows about the latest release.
+	// Ignore errors — if update fails, upgrade may still succeed if the tap is warm.
+	upd := execCommand("brew", "update", "--quiet")
+	upd.Stdout = os.Stdout
+	upd.Stderr = os.Stderr
+	_ = upd.Run()
+
+	cmd := execCommand("brew", "upgrade", b.Cask)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("brew upgrade --cask %s failed: %w\n\nFix: run `brew upgrade --cask %s` manually", b.Cask, err, b.Cask)
+		return fmt.Errorf("brew upgrade %s failed: %w\n\nFix: run `brew upgrade %s` manually", b.Cask, err, b.Cask)
+	}
+
+	// brew exits 0 even when "already at latest version" — verify the install.
+	installed := brewInstalledVersion(b.Cask)
+	if installed != "" && installed != version {
+		return fmt.Errorf(
+			"brew upgrade completed but installed version is %s (wanted %s)\n\n"+
+				"The Homebrew tap may still be catching up. Try again in a moment:\n"+
+				"  brew update && brew upgrade %s",
+			installed, version, b.Cask,
+		)
 	}
 	return nil
+}
+
+// brewInstalledVersion returns the currently installed version for a formula/cask,
+// or an empty string if it cannot be determined.
+func brewInstalledVersion(name string) string {
+	out, err := execCommand("brew", "list", "--versions", name).Output()
+	if err != nil || len(out) == 0 {
+		return ""
+	}
+	// Output format: "<name> <version>" or "<name> <v1> <v2> ..."
+	fields := strings.Fields(strings.TrimSpace(string(out)))
+	if len(fields) >= 2 {
+		return fields[len(fields)-1]
+	}
+	return ""
 }
 
 // DpkgUpgrader downloads the .deb from GitHub Releases and installs it with dpkg.

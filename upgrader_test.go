@@ -27,7 +27,11 @@ func TestBrewUpgrader_Success(t *testing.T) {
 	origExec := execCommand
 	execCommand = func(name string, args ...string) *exec.Cmd {
 		if name == "brew" {
-			return exec.Command("echo", "==> Upgrading bai cask")
+			// brew list --versions bai → "bai 1.5.0"
+			if len(args) >= 1 && args[0] == "list" {
+				return exec.Command("echo", "bai 1.5.0")
+			}
+			return exec.Command("echo", "==> Upgrading bai")
 		}
 		return exec.Command(name, args...)
 	}
@@ -39,10 +43,34 @@ func TestBrewUpgrader_Success(t *testing.T) {
 	}
 }
 
+func TestBrewUpgrader_TapNotUpdated(t *testing.T) {
+	origExec := execCommand
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		if name == "brew" {
+			if len(args) >= 1 && args[0] == "list" {
+				// Still at old version after upgrade — tap wasn't refreshed
+				return exec.Command("echo", "bai 1.4.0")
+			}
+			return exec.Command("echo", "Warning: Not upgrading bai, the latest version is already installed")
+		}
+		return exec.Command(name, args...)
+	}
+	defer func() { execCommand = origExec }()
+
+	u := &BrewUpgrader{Cask: "bai"}
+	err := u.Upgrade(testCfg, "1.5.0")
+	if err == nil {
+		t.Error("expected error when installed version doesn't match target, got nil")
+	}
+}
+
 func TestBrewUpgrader_Failure(t *testing.T) {
 	origExec := execCommand
 	execCommand = func(name string, args ...string) *exec.Cmd {
 		if name == "brew" {
+			if len(args) >= 1 && args[0] == "list" {
+				return exec.Command("false")
+			}
 			return exec.Command("false")
 		}
 		return exec.Command(name, args...)
