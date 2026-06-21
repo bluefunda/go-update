@@ -166,7 +166,7 @@ func (b *BinaryUpgrader) Upgrade(cfg Config, version string) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(archivePath)
+	defer os.Remove(archivePath) //nolint:errcheck
 
 	// Verify integrity.
 	if err := verifyChecksum(archivePath, expected); err != nil {
@@ -184,11 +184,11 @@ func (b *BinaryUpgrader) Upgrade(cfg Config, version string) error {
 		return fmt.Errorf("extracting binary from %s: %w", asset, err)
 	}
 	if err := os.Chmod(tmpPath, 0o755); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("setting permissions on new binary: %w", err)
 	}
 	if err := os.Rename(tmpPath, binPath); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("replacing %s: %w\n\nFix: try running with elevated permissions or install to a user-writable location", binPath, err)
 	}
 	return nil
@@ -206,7 +206,7 @@ func downloadAsset(owner, repo, version, asset string) (path string, err error) 
 	if err != nil {
 		return "", fmt.Errorf("downloading %s: %w", asset, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("downloading %s: HTTP %d", asset, resp.StatusCode)
 	}
@@ -216,9 +216,9 @@ func downloadAsset(owner, repo, version, asset string) (path string, err error) 
 		return "", err
 	}
 	defer func() {
-		tmp.Close()
+		_ = tmp.Close()
 		if err != nil {
-			os.Remove(tmp.Name())
+			_ = os.Remove(tmp.Name())
 		}
 	}()
 
@@ -233,7 +233,7 @@ func fetchChecksums(url string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP %d fetching checksums", resp.StatusCode)
 	}
@@ -263,7 +263,7 @@ func verifyChecksum(path, expected string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -289,13 +289,13 @@ func extractFromTarGz(archivePath, binaryName, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	gz, err := gzip.NewReader(f)
 	if err != nil {
 		return err
 	}
-	defer gz.Close()
+	defer gz.Close() //nolint:errcheck
 
 	tr := tar.NewReader(gz)
 	for {
@@ -312,7 +312,7 @@ func extractFromTarGz(archivePath, binaryName, dst string) error {
 				return err
 			}
 			_, cpErr := io.Copy(out, tr)
-			out.Close()
+			_ = out.Close()
 			return cpErr
 		}
 	}
@@ -324,7 +324,7 @@ func extractFromZip(archivePath, binaryName, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck
 
 	for _, f := range r.File {
 		if filepath.Base(f.Name) == binaryName {
@@ -334,12 +334,12 @@ func extractFromZip(archivePath, binaryName, dst string) error {
 			}
 			out, err := os.Create(dst)
 			if err != nil {
-				rc.Close()
+				_ = rc.Close()
 				return err
 			}
 			_, cpErr := io.Copy(out, rc)
-			rc.Close()
-			out.Close()
+			_ = rc.Close()
+			_ = out.Close()
 			return cpErr
 		}
 	}

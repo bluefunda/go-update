@@ -211,9 +211,9 @@ func TestBinaryUpgrader_ChecksumMismatch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch filepath.Base(r.URL.Path) {
 		case "checksums.txt":
-			w.Write([]byte(checksumLine))
+			_, _ = w.Write([]byte(checksumLine))
 		case asset:
-			w.Write(archiveData)
+			_, _ = w.Write(archiveData)
 		default:
 			http.NotFound(w, r)
 		}
@@ -238,7 +238,7 @@ func newSimpleAssetServer(t *testing.T, assetName string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if filepath.Base(r.URL.Path) == assetName {
-			w.Write([]byte("fake package bytes"))
+			_, _ = w.Write([]byte("fake package bytes"))
 			return
 		}
 		http.NotFound(w, r)
@@ -257,9 +257,9 @@ func buildTarGz(t *testing.T, binaryName string, content []byte) []byte {
 		Size:     int64(len(content)),
 		Typeflag: tar.TypeReg,
 	})
-	tw.Write(content)
-	tw.Close()
-	gw.Close()
+	_, _ = tw.Write(content)
+	_ = tw.Close()
+	_ = gw.Close()
 	return buf.Bytes()
 }
 
@@ -272,7 +272,7 @@ func buildZip(t *testing.T, binaryName string, content []byte) []byte {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Write(content)
-	zw.Close()
+	_, _ = f.Write(content)
+	_ = zw.Close()
 	return buf.Bytes()
 }
