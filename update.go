@@ -22,7 +22,11 @@ type Config struct {
 	GitHubOwner string
 	// GitHubRepo is the GitHub repository name, e.g. "bluefunda-ai".
 	GitHubRepo string
-	// HomebrewCask is the cask name used in the homebrew-tap, e.g. "bai".
+	// HomebrewTap is the tap name, e.g. "bluefunda/tap". When set, the tap
+	// is trusted before upgrade so Homebrew 4.x loads the formula without
+	// requiring the user to run `brew trust` manually.
+	HomebrewTap string
+	// HomebrewCask is the formula or cask name in the tap, e.g. "bai".
 	HomebrewCask string
 }
 
@@ -61,7 +65,7 @@ func Run(cfg Config) error {
 		return fmt.Errorf("determining executable path: %w", err)
 	}
 
-	method := detectMethod(exe)
+	method := detectMethod(exe, cfg.BinaryName)
 	upgrader := newUpgrader(method, cfg)
 
 	fmt.Printf("\nUpdating via %s...\n\n", upgrader.Name())

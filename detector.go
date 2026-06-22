@@ -11,7 +11,7 @@ import (
 type Method int
 
 const (
-	MethodBrew   Method = iota // Homebrew cask
+	MethodBrew   Method = iota // Homebrew formula or cask
 	MethodDpkg                 // dpkg / apt-get (Debian/Ubuntu)
 	MethodRpm                  // rpm (RHEL/Fedora)
 	MethodBinary               // standalone binary (fallback)
@@ -21,7 +21,8 @@ const (
 var execCommand = exec.Command
 
 // detectMethod infers the installation method from the binary's resolved path.
-func detectMethod(exePath string) Method {
+// binaryName is the formula/package name used to verify brew tracking.
+func detectMethod(exePath, binaryName string) Method {
 	real, err := filepath.EvalSymlinks(exePath)
 	if err != nil {
 		real = exePath
@@ -31,7 +32,13 @@ func detectMethod(exePath string) Method {
 	if strings.Contains(lower, "homebrew") ||
 		strings.Contains(lower, "linuxbrew") ||
 		strings.Contains(lower, "/cellar/") {
-		return MethodBrew
+		// Verify brew actually tracks this binary. install.sh may place
+		// the binary under a Homebrew-managed prefix without brew knowing,
+		// causing `brew upgrade` to fail with "not installed".
+		if isBrewManaged(binaryName) {
+			return MethodBrew
+		}
+		return MethodBinary
 	}
 
 	if runtime.GOOS == "linux" {
@@ -49,4 +56,13 @@ func detectMethod(exePath string) Method {
 	}
 
 	return MethodBinary
+}
+
+// isBrewManaged returns true when brew tracks the named formula.
+func isBrewManaged(name string) bool {
+	out, err := execCommand("brew", "list", "--formula", name).Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) != ""
 }
