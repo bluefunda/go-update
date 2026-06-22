@@ -47,6 +47,12 @@ type BrewUpgrader struct {
 func (b *BrewUpgrader) Name() string { return "Homebrew" }
 
 func (b *BrewUpgrader) Upgrade(cfg Config, version string) error {
+	// Homebrew 4.x requires taps to be explicitly trusted before formulas
+	// can be loaded. Trust silently; errors are ignored (already trusted).
+	if cfg.HomebrewTap != "" && runtime.GOOS == "darwin" {
+		_ = execCommand("brew", "trust", cfg.HomebrewTap).Run()
+	}
+
 	// Refresh tap index so the formula knows about the latest release.
 	// Ignore errors — if update fails, upgrade may still succeed if the tap is warm.
 	upd := execCommand("brew", "update", "--quiet")
